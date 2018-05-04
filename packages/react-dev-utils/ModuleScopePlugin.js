@@ -12,12 +12,12 @@ const path = require('path');
 
 class ModuleScopePlugin {
   constructor(appSrc, allowedFiles = []) {
-    this.appSrcs = Array.isArray(appSrc) ? appSrc : [appSrc];
+    this.appSrc = appSrc;
     this.allowedFiles = new Set(allowedFiles);
   }
 
   apply(resolver) {
-    const { appSrcs } = this;
+    const { appSrc } = this;
     resolver.plugin('file', (request, callback) => {
       // Unknown issuer, probably webpack internals
       if (!request.context.issuer) {
@@ -34,13 +34,9 @@ class ModuleScopePlugin {
       }
       // Resolve the issuer from our appSrc and make sure it's one of our files
       // Maybe an indexOf === 0 would be better?
-      if (
-        appSrcs.every(appSrc => {
-          const relative = path.relative(appSrc, request.context.issuer);
-          // If it's not in one of our app src or a subdirectory, not our request!
-          return relative.startsWith('../') || relative.startsWith('..\\');
-        })
-      ) {
+      const relative = path.relative(appSrc, request.context.issuer);
+      // If it's not in src/ or a subdirectory, not our request!
+      if (relative.startsWith('../') || relative.startsWith('..\\')) {
         return callback();
       }
       const requestFullPath = path.resolve(
@@ -51,15 +47,11 @@ class ModuleScopePlugin {
         return callback();
       }
       // Find path from src to the requested file
-      // Error if in a parent directory of all given appSrcs
+      // Error if in a parent directory of src/
+      const requestRelative = path.relative(appSrc, requestFullPath);
       if (
-        appSrcs.every(appSrc => {
-          const requestRelative = path.relative(appSrc, requestFullPath);
-          return (
-            requestRelative.startsWith('../') ||
-            requestRelative.startsWith('..\\')
-          );
-        })
+        requestRelative.startsWith('../') ||
+        requestRelative.startsWith('..\\')
       ) {
         callback(
           new Error(

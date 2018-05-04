@@ -22,7 +22,6 @@ original_yarn_registry_url=`yarn config get registry`
 
 function cleanup {
   echo 'Cleaning up.'
-  unset BROWSERSLIST
   ps -ef | grep 'react-scripts' | grep -v grep | awk '{print $2}' | xargs kill -9
   cd "$root_path"
   # TODO: fix "Device or resource busy" and remove ``|| $CI`
@@ -68,6 +67,7 @@ root_path=$PWD
 if hash npm 2>/dev/null
 then
   npm i -g npm@latest
+  npm cache clean || npm cache verify
 fi
 
 # Bootstrap monorepo
@@ -114,9 +114,6 @@ yarn add test-integrity@^2.0.1
 # Enter the app directory
 cd "$temp_app_path/test-kitchensink"
 
-# In kitchensink, we want to test all transforms
-export BROWSERSLIST='ie 9'
-
 # Link to test module
 npm link "$temp_module_path/node_modules/test-integrity"
 
@@ -137,29 +134,26 @@ REACT_APP_SHELL_ENV_MESSAGE=fromtheshell \
   NODE_ENV=test \
   yarn test --no-cache --testPathPattern=src
 
-# Prepare "development" environment
+# Test "development" environment
 tmp_server_log=`mktemp`
 PORT=3001 \
   REACT_APP_SHELL_ENV_MESSAGE=fromtheshell \
   NODE_PATH=src \
   nohup yarn start &>$tmp_server_log &
 grep -q 'You can now view' <(tail -f $tmp_server_log)
-
-# Test "development" environment
 E2E_URL="http://localhost:3001" \
   REACT_APP_SHELL_ENV_MESSAGE=fromtheshell \
   CI=true NODE_PATH=src \
   NODE_ENV=development \
-  BABEL_ENV=test \
-  node_modules/.bin/mocha --compilers js:@babel/register --require @babel/polyfill integration/*.test.js
+  node_modules/.bin/mocha --require babel-register --require babel-polyfill integration/*.test.js
+
 # Test "production" environment
 E2E_FILE=./build/index.html \
   CI=true \
   NODE_PATH=src \
   NODE_ENV=production \
-  BABEL_ENV=test \
   PUBLIC_URL=http://www.example.org/spa/ \
-  node_modules/.bin/mocha --compilers js:@babel/register --require @babel/polyfill integration/*.test.js
+  node_modules/.bin/mocha --require babel-register --require babel-polyfill integration/*.test.js
 
 # ******************************************************************************
 # Finally, let's check that everything still works after ejecting.
@@ -199,17 +193,15 @@ E2E_URL="http://localhost:3002" \
   REACT_APP_SHELL_ENV_MESSAGE=fromtheshell \
   CI=true NODE_PATH=src \
   NODE_ENV=development \
-  BABEL_ENV=test \
-  node_modules/.bin/mocha --compilers js:@babel/register --require @babel/polyfill integration/*.test.js
+  node_modules/.bin/mocha --require babel-register --require babel-polyfill integration/*.test.js
 
 # Test "production" environment
 E2E_FILE=./build/index.html \
   CI=true \
   NODE_ENV=production \
-  BABEL_ENV=test \
   NODE_PATH=src \
   PUBLIC_URL=http://www.example.org/spa/ \
-  node_modules/.bin/mocha --compilers js:@babel/register --require @babel/polyfill integration/*.test.js
+  node_modules/.bin/mocha --require babel-register --require babel-polyfill integration/*.test.js
 
 # Cleanup
 cleanup

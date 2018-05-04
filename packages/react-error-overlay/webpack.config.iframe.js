@@ -18,28 +18,9 @@ module.exports = {
   module: {
     rules: [
       {
-        oneOf: [
-          // Source
-          {
-            test: /\.js$/,
-            include: [path.resolve(__dirname, './src')],
-            use: {
-              loader: 'babel-loader',
-            },
-          },
-          // Dependencies
-          {
-            test: /\.js$/,
-            use: {
-              loader: 'babel-loader',
-              options: {
-                babelrc: false,
-                compact: false,
-                presets: ['babel-preset-react-app/dependencies'],
-              },
-            },
-          },
-        ],
+        test: /\.js$/,
+        include: path.resolve(__dirname, './src'),
+        use: 'babel-loader',
       },
     ],
   },
